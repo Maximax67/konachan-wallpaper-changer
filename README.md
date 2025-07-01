@@ -25,7 +25,7 @@ A Python application that automatically fetches, caches, and rotates wallpapers 
 2. Configure your preferences in `config.json` (auto-generated on first run).
 3. Run the application:
    ```sh
-   python main.py
+   python src/main.py
    ```
 
 ## Building an Executable
