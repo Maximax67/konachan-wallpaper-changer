@@ -67,7 +67,7 @@ class Config:
         show_toasts: bool = True,
         max_pages_to_search: int = 10,
         search_page_limit: int = 100,
-        old_images_threshold: float = 0.1,
+        old_images_threshold: float = 0.2,
         queries: Optional[List[str]] = None,
         max_images: int = 20,
         image_switch_interval: Optional[int] = 300,

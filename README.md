@@ -72,7 +72,7 @@ The application is configured via a `config.json` file. Here are the available o
     "show_toasts": true,
     "max_pages_to_search": 10,
     "search_page_limit": 100,
-    "old_images_threshold": 0.1,
+    "old_images_threshold": 0.2,
     "queries": [
         "*"
     ],
