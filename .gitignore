@@ -5,3 +5,4 @@ dist
 wallpapers
 
 cache.json
+*.log
