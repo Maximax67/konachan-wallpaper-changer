@@ -178,8 +178,6 @@ class WallpaperChanger:
                                 f"Failed to remove image: {old_img_path} ({e})"
                             )
 
-                        self.downloaded_images.move_prev()
-
     def _set_wallpaper(self, img_path: str) -> bool:
         if img_path == self.current_wallpaper:
             return False
