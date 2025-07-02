@@ -39,7 +39,7 @@ class DownloadedImagesList(Generic[T]):
 
         self.size += 1
 
-    def pop_left(self) -> T:
+    def pop(self) -> T:
         if not self.head:
             raise IndexError("pop from empty list")
 

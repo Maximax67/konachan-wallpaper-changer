@@ -27,7 +27,7 @@ class WallpaperChanger:
         self.config = config
         self.config.wallpapers_folder_path.mkdir(exist_ok=True)
 
-        self.threshold = max(1, int(config.max_images * config.old_images_threshold))
+        self.threshold = int(config.max_images * config.old_images_threshold)
 
         self.paused = config.paused_on_startup
         self.enabled = config.enabled_on_startup
@@ -55,15 +55,15 @@ class WallpaperChanger:
         self._load_image_infos()
         self._setup_hotkeys()
 
+        if self.enabled:
+            self.set_current_wallpaper()
+
         self.thread = threading.Thread(target=self._fetch_loop, daemon=True)
         self.thread.start()
 
         if config.image_switch_interval:
             self.thread = threading.Thread(target=self._auto_image_switch, daemon=True)
             self.thread.start()
-
-        if self.enabled:
-            self.set_current_wallpaper()
 
     def _load_image_infos(self) -> None:
         self.cache_hash = get_queries_ratings_hash(
@@ -102,20 +102,29 @@ class WallpaperChanger:
 
         logger.info(f"Total images: {len(image_infos)}")
 
-        temp_images_list: List[Tuple[str, str, str]] = []
+        temp_images_list: List[Tuple[str, str, str, float]] = []
         for file in self.config.wallpapers_folder_path.iterdir():
             if file.is_file():
-                img_hash = file.stem
-                image_url = image_infos.get(img_hash)
+                image_hash = file.stem
+                image_url = image_infos.get(image_hash)
                 if image_url and len(temp_images_list) < self.config.max_images:
-                    temp_images_list.append((img_hash, str(file), image_url))
-                    del image_infos[img_hash]
+                    creation_time = file.stat().st_ctime
+                    temp_images_list.append(
+                        (image_hash, str(file), image_url, creation_time)
+                    )
+                    del image_infos[image_hash]
                 else:
                     file.unlink()
 
-        random.shuffle(temp_images_list)
+        temp_images_list.sort(key=lambda x: x[3])
 
-        self.downloaded_images = DownloadedImagesList.from_iterable(temp_images_list)
+        self.downloaded_images = DownloadedImagesList()
+        for image_hash, image_path, image_url, _ in temp_images_list:
+            self.downloaded_images.append((image_hash, image_path, image_url))
+
+        moves = min(len(temp_images_list) - 1, self.threshold + 1)
+        for _ in range(moves):
+            self.downloaded_images.move_next()
 
         image_info_list = list(image_infos.items())
         random.shuffle(image_info_list)
@@ -138,13 +147,11 @@ class WallpaperChanger:
 
             if current_size < self.config.max_images:
                 to_fetch = self.config.max_images - current_size
+                logger.debug("Not enough images, fetching image(s) to fill batch...")
+            elif position > self.threshold:
+                to_fetch = position - self.threshold
                 logger.debug(
-                    f"Not enough images, fetching {to_fetch} image(s) to fill batch..."
-                )
-            elif position >= self.threshold:
-                to_fetch = position - self.threshold + 1
-                logger.debug(
-                    f"Index {position} >= {self.threshold} (threshold of batch size), rotating {to_fetch} image(s)..."
+                    f"Index {position} > {self.threshold} (threshold of batch size), rotating image(s)..."
                 )
             else:
                 self.fetch_event.clear()
@@ -189,7 +196,7 @@ class WallpaperChanger:
 
                         while len(self.downloaded_images) > self.config.max_images:
                             old_img_hash, old_img_path, old_img_url = (
-                                self.downloaded_images.pop_left()
+                                self.downloaded_images.pop()
                             )
                             self.image_queue.enqueue((old_img_hash, old_img_url))
 
@@ -272,12 +279,14 @@ class WallpaperChanger:
             with self._auto_image_switch_lock:
                 self._auto_image_switch_time = datetime.now()
 
-            self.downloaded_images.move_prev()
+            if self.downloaded_images.position_from_start:
+                self.downloaded_images.move_prev()
 
-            if self.set_current_wallpaper():
-                self._show_toast("Previous wallpaper")
-            else:
-                self._show_toast("No previous wallpaper")
+                if self.set_current_wallpaper():
+                    self._show_toast("Previous wallpaper")
+                    return
+
+            self._show_toast("No previous wallpaper")
 
     def pause(self) -> None:
         if not self.enabled:
