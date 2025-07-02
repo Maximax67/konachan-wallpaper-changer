@@ -2,7 +2,7 @@ import os
 import random
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, List, Optional, Tuple
 import urllib3
 
@@ -58,15 +58,13 @@ class WallpaperChanger:
         if self.enabled:
             self.set_current_wallpaper()
 
-        self.thread = threading.Thread(target=self._fetch_loop, daemon=True)
-        self.thread.start()
+        threading.Thread(target=self._fetch_loop, daemon=True).start()
 
         if config.image_switch_interval:
-            self.thread = threading.Thread(target=self._auto_image_switch, daemon=True)
-            self.thread.start()
+            threading.Thread(target=self._auto_image_switch, daemon=True).start()
 
     def _load_image_infos(self) -> None:
-        self.cache_hash = get_queries_ratings_hash(
+        cache_hash = get_queries_ratings_hash(
             self.config.queries,
             self.config.ratings,
             self.config.min_score,
@@ -74,19 +72,31 @@ class WallpaperChanger:
         )
 
         cache = load_image_infos_cache()
-        if cache.get("hash") == self.cache_hash:
+
+        cache_expired = False
+        if self.config.cache_refresh_interval:
+            stored_timestamp = cache.get("timestamp")
+            if stored_timestamp:
+                current_time = datetime.now(timezone.utc)
+                stored_time = datetime.fromtimestamp(stored_timestamp)
+                cache_expired = (
+                    current_time > stored_time + self.config.cache_refresh_interval
+                )
+            else:
+                cache_expired = True
+
+        if not cache_expired and cache.get("hash") == cache_hash:
             logger.info("Using cached image info")
             image_infos = cache.get("data", {})
 
             self._show_toast("Wallpaper changer started")
         else:
-            logger.info(
-                "Cache is missing or config changed, fetching new image info..."
-            )
+            logger.info("Fetching new image info...")
             self._show_toast(
-                "Wallpaper changer started. Fetching image info...",
+                "Wallpaper changer started. Fetching new image info...",
                 None,
             )
+
             image_infos = fetch_and_cache_all_image_infos(
                 self.config.queries,
                 self.config.ratings,
@@ -96,7 +106,13 @@ class WallpaperChanger:
                 self.config.max_image_size,
             )
 
-            save_image_infos_cache({"hash": self.cache_hash, "data": image_infos})
+            save_image_infos_cache(
+                {
+                    "hash": cache_hash,
+                    "data": image_infos,
+                    "timestamp": int(datetime.now(timezone.utc).timestamp()),
+                }
+            )
 
             self._show_toast("All image info fetched")
 

@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from constants import CONFIG_PATH
 from logger import logger
+from utils import parse_duration
 
 
 class Hotkeys:
@@ -67,9 +68,9 @@ class Config:
         show_toasts: bool = True,
         max_pages_to_search: int = 10,
         search_page_limit: int = 100,
-        old_images_threshold: float = 0.2,
         queries: Optional[List[str]] = None,
         max_images: int = 20,
+        old_images_threshold: float = 0.2,
         image_switch_interval: Optional[int] = 300,
         wallpapers_folder_path: Path = Path("./wallpapers"),
         hotkeys: Optional[Hotkeys] = None,
@@ -77,6 +78,7 @@ class Config:
         ratings: Optional[List[str]] = None,
         min_score: Optional[int] = None,
         max_image_size: Optional[int] = None,
+        cache_refresh_interval: Optional[str] = "7d",
         **kwargs: Any,
     ) -> None:
         if kwargs:
@@ -98,11 +100,6 @@ class Config:
 
         self.search_page_limit = search_page_limit
 
-        if not (0.0 < old_images_threshold < 1.0):
-            raise ValueError("old_images_threshold must be between 0 and 1")
-
-        self.old_images_threshold = old_images_threshold
-
         if queries is None:
             queries = ["*"]
         elif len(queries) < 1:
@@ -114,6 +111,11 @@ class Config:
             raise ValueError("max_images must be > 0")
 
         self.max_images = max_images
+
+        if not (0.0 < old_images_threshold < 1.0):
+            raise ValueError("old_images_threshold must be between 0 and 1")
+
+        self.old_images_threshold = old_images_threshold
 
         if image_switch_interval is not None and image_switch_interval <= 0:
             raise ValueError("image_switch_interval must be > 0 if provided")
@@ -136,6 +138,10 @@ class Config:
 
         self.max_image_size = max_image_size
 
+        self.cache_refresh_interval = (
+            parse_duration(cache_refresh_interval) if cache_refresh_interval else None
+        )
+
     def _validate_ratings(self, ratings: List[str]) -> List[str]:
         allowed = {"s", "q", "e"}
         if not all(r in allowed for r in ratings):
@@ -150,9 +156,9 @@ class Config:
             "show_toasts": self.show_toasts,
             "max_pages_to_search": self.max_pages_to_search,
             "search_page_limit": self.search_page_limit,
-            "old_images_threshold": self.old_images_threshold,
             "queries": self.queries,
             "max_images": self.max_images,
+            "old_images_threshold": self.old_images_threshold,
             "image_switch_interval": self.image_switch_interval,
             "wallpapers_folder_path": str(self.wallpapers_folder_path),
             "hotkeys": self.hotkeys.to_dict(),

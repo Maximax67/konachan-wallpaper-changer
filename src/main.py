@@ -7,7 +7,7 @@ import keyboard
 from config import load_config
 from constants import SINGLETON_LABEL
 from logger import logger
-from utils import set_dpi_awareness, show_error, start_tk_loop
+from utils import clear_keys, set_dpi_awareness, show_error, start_tk_loop
 from wallpaper_changer import WallpaperChanger
 from singleton import SingleInstance, SingleInstanceException
 
@@ -22,11 +22,13 @@ if __name__ == "__main__":
 
             if config.show_toasts:
                 started_event = threading.Event()
-                tk_thread = threading.Thread(
+                threading.Thread(
                     target=start_tk_loop, args=(started_event,), daemon=True
-                )
-                tk_thread.start()
+                ).start()
                 started_event.wait()
+
+            if sys.platform == "win32":
+                threading.Thread(target=clear_keys, daemon=True).start()
 
             changer = WallpaperChanger(config)
 
