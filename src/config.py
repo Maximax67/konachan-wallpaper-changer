@@ -16,8 +16,8 @@ class Hotkeys:
     exit: str
 
     DEFAULTS = {
-        "next": "ctrl+alt+'",
-        "back": "ctrl+alt+;",
+        "next": "ctrl+alt+i",
+        "back": "ctrl+alt+u",
         "pause": "ctrl+alt+p",
         "unpause": "ctrl+alt+p",
         "disable": "ctrl+alt+e",

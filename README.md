@@ -81,8 +81,8 @@ The application is configured via a `config.json` file. Here are the available o
     "image_switch_interval": 300,
     "wallpapers_folder_path": "wallpapers",
     "hotkeys": {
-        "next": "ctrl+alt+'",
-        "back": "ctrl+alt+;",
+        "next": "ctrl+alt+i",
+        "back": "ctrl+alt+u",
         "pause": "ctrl+alt+p",
         "unpause": "ctrl+alt+p",
         "disable": "ctrl+alt+e",
@@ -104,8 +104,8 @@ The default `hotkeys` object contains the following keys:
 
 | Key      | Default Value         | Description |
 |----------|----------------------|-------------|
-| `next`   | `ctrl+alt+'`         | Next wallpaper |
-| `back`   | `ctrl+alt+;`         | Previous wallpaper |
+| `next`   | `ctrl+alt+i`         | Next wallpaper |
+| `back`   | `ctrl+alt+u`         | Previous wallpaper |
 | `pause`  | `ctrl+alt+p`         | Pause auto-switching |
 | `unpause`| `ctrl+alt+p`         | Unpause auto-switching |
 | `disable`| `ctrl+alt+e`         | Disable wallpaper changer |
