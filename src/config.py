@@ -76,6 +76,7 @@ class Config:
         default_image: Optional[Path] = None,
         ratings: Optional[List[str]] = None,
         min_score: Optional[int] = None,
+        max_image_size: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
         if kwargs:
@@ -130,6 +131,11 @@ class Config:
 
         self.min_score = min_score
 
+        if max_image_size is not None and max_image_size < 0:
+            raise ValueError("max_image_size must be >= 0")
+
+        self.max_image_size = max_image_size
+
     def _validate_ratings(self, ratings: List[str]) -> List[str]:
         allowed = {"s", "q", "e"}
         if not all(r in allowed for r in ratings):
@@ -153,6 +159,7 @@ class Config:
             "default_image": str(self.default_image) if self.default_image else None,
             "ratings": self.ratings,
             "min_score": self.min_score,
+            "max_image_size": self.max_image_size,
         }
 
     @staticmethod

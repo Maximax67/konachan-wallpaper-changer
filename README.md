@@ -59,8 +59,9 @@ The application is configured via a `config.json` file. Here are the available o
 | `wallpapers_folder_path`   | `str`               | Path to the folder where wallpapers are stored |
 | `hotkeys`             | `object`            | Hotkey configuration (see below) |
 | `default_image`       | `str \| null`       | Path to a default image to use when disabled |
-| `ratings`             | `list[str] \| null`         | List of allowed ratings: `s` (safe), `q` (questionable), `e` (explicit). Defaults to safe only. |
+| `ratings`             | `list[str] \| null`         | List of allowed ratings: `s` (safe), `q` (questionable), `e` (explicit). Defaults to safe only |
 | `min_score`           | `int \| null`       | Minimum score for images to be downloaded (null disables score filtering) |
+| `max_image_size`           | `int \| null`       | Maximum file size for images to be downloaded (null downloads all) |
 
 
 #### Default config file:
@@ -92,7 +93,8 @@ The application is configured via a `config.json` file. Here are the available o
     "ratings": [
         "s"
     ],
-    "min_score": null
+    "min_score": null,
+    "max_image_size": null
 }
 ```
 

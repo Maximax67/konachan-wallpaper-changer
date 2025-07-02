@@ -24,5 +24,6 @@
     "ratings": [
         "s"
     ],
-    "min_score": null
+    "min_score": null,
+    "max_image_size": null
 }

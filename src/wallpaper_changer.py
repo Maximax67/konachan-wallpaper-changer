@@ -4,9 +4,9 @@ import threading
 import time
 from datetime import datetime
 from typing import Callable, List, Optional, Tuple
+import urllib3
 
 import keyboard
-import requests
 
 from api import fetch_and_cache_all_image_infos
 from config import Config
@@ -62,10 +62,17 @@ class WallpaperChanger:
             self.thread = threading.Thread(target=self._auto_image_switch, daemon=True)
             self.thread.start()
 
+        if self.enabled:
+            self.set_current_wallpaper()
+
     def _load_image_infos(self) -> None:
         self.cache_hash = get_queries_ratings_hash(
-            self.config.queries, self.config.ratings, self.config.min_score
+            self.config.queries,
+            self.config.ratings,
+            self.config.min_score,
+            self.config.max_image_size,
         )
+
         cache = load_image_infos_cache()
         if cache.get("hash") == self.cache_hash:
             logger.info("Using cached image info")
@@ -86,6 +93,7 @@ class WallpaperChanger:
                 self.config.min_score,
                 self.config.max_pages_to_search,
                 self.config.search_page_limit,
+                self.config.max_image_size,
             )
 
             save_image_infos_cache({"hash": self.cache_hash, "data": image_infos})
@@ -117,6 +125,11 @@ class WallpaperChanger:
         logger.debug(f"Loaded {len(self.downloaded_images)} images from folder")
 
     def _fetch_loop(self) -> None:
+        delay = 1
+        max_delay = 60
+
+        http = urllib3.PoolManager()
+
         while True:
             self.fetch_event.wait()
 
@@ -138,45 +151,58 @@ class WallpaperChanger:
                 continue
 
             for _ in range(min(to_fetch, self.image_queue.size)):
+                download_success = False
+
                 img_hash, img_url = self.image_queue.dequeue()
                 ext = os.path.splitext(img_url)[1]
                 img_path = os.path.join(
                     self.config.wallpapers_folder_path, f"{img_hash}{ext}"
                 )
+                logger.debug(f"Downloading image: {img_url}")
                 try:
-                    logger.debug(f"Downloading image: {img_url}")
-                    img_data = requests.get(img_url, timeout=10)
-                    if img_data.status_code == 200:
+                    response: urllib3.HTTPResponse = http.request(
+                        "GET", img_url, timeout=30.0, preload_content=False
+                    )
+
+                    if response.status == 200:
                         with open(img_path, "wb") as f:
-                            f.write(img_data.content)
+                            for chunk in response.stream(16384):
+                                f.write(chunk)
+
+                        download_success = True
                         logger.debug(f"Saved image: {img_path}")
                     else:
                         self.image_queue.enqueue((img_hash, img_url))
                         logger.error(
-                            f"Failed to download image: {img_url} (status {img_data.status_code})"
+                            f"Failed to download image: {img_url} (status {response.status})"
                         )
-                        continue
+
+                    response.release_conn()
                 except Exception as e:
                     self.image_queue.enqueue((img_hash, img_url))
                     logger.error(f"Error downloading image: {img_url} ({e})")
-                    continue
 
-                with self.lock:
-                    self.downloaded_images.append((img_hash, img_path, img_url))
+                if download_success:
+                    delay = 1
+                    with self.lock:
+                        self.downloaded_images.append((img_hash, img_path, img_url))
 
-                    while len(self.downloaded_images) > self.config.max_images:
-                        old_img_hash, old_img_path, old_img_url = (
-                            self.downloaded_images.pop_left()
-                        )
-                        self.image_queue.enqueue((old_img_hash, old_img_url))
-
-                        try:
-                            os.remove(old_img_path)
-                            logger.debug(f"Removed old image: {old_img_path}")
-                        except Exception as e:
-                            logger.warning(
-                                f"Failed to remove image: {old_img_path} ({e})"
+                        while len(self.downloaded_images) > self.config.max_images:
+                            old_img_hash, old_img_path, old_img_url = (
+                                self.downloaded_images.pop_left()
                             )
+                            self.image_queue.enqueue((old_img_hash, old_img_url))
+
+                            try:
+                                os.remove(old_img_path)
+                                logger.debug(f"Removed old image: {old_img_path}")
+                            except Exception as e:
+                                logger.warning(
+                                    f"Failed to remove image: {old_img_path} ({e})"
+                                )
+                else:
+                    time.sleep(delay)
+                    delay = min(delay * 2, max_delay)
 
     def _set_wallpaper(self, img_path: str) -> bool:
         if img_path == self.current_wallpaper:
@@ -284,6 +310,8 @@ class WallpaperChanger:
         self.enabled = True
         if not self.paused:
             self._set_auto_image_switch_event(datetime.now())
+
+        self.set_current_wallpaper()
         self._show_toast("Enabled")
 
     def exit(self) -> None:

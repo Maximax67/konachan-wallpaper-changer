@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-from PyInstaller.building.build_main import Analysis, PYZ, EXE
+from PyInstaller.building.build_main import Analysis
+from PyInstaller.building.api import PYZ, EXE
 
 a = Analysis(
     ["src/main.py"],

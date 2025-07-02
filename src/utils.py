@@ -96,12 +96,16 @@ def set_wallpaper(image_path: str) -> None:
 
 
 def get_queries_ratings_hash(
-    queries: List[str], ratings: List[str], min_score: Optional[int]
+    queries: List[str],
+    ratings: List[str],
+    min_score: Optional[int],
+    max_image_size: Optional[int],
 ) -> str:
     key = {
         "queries": sorted(queries),
         "ratings": sorted(ratings),
         "min_score": min_score,
+        "max_image_size": max_image_size,
     }
 
     return hashlib.md5(json.dumps(key, sort_keys=True).encode("utf-8")).hexdigest()
