@@ -5,14 +5,12 @@ import os
 import re
 import subprocess
 import sys
-import threading
 import tkinter as tk
 from tkinter import messagebox
 from typing import Any, Dict, List, Optional, cast
 
 from constants import IMAGE_INFOS_CACHE
 from logger import logger
-from toasts import ToastManager
 
 
 if sys.platform == "win32":
@@ -35,21 +33,6 @@ def set_dpi_awareness() -> None:
     elif sys.platform.startswith("linux"):
         os.environ["GDK_SCALE"] = "1"
         os.environ["QT_SCALE_FACTOR"] = "1"
-
-
-def start_tk_loop(started_event: threading.Event) -> None:
-    try:
-        set_dpi_awareness()
-        root = ToastManager._get_root()
-    except Exception as e:
-        logger.error(f"Failed to start Tk loop: {e}")
-    finally:
-        started_event.set()
-
-    try:
-        root.mainloop()
-    except Exception as e:
-        logger.error(f"Tkinter mainloop error: {e}")
 
 
 def show_error(title: str, message: str) -> None:

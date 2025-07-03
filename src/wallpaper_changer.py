@@ -1,9 +1,9 @@
 import os
 import random
 import threading
-import time
 from datetime import datetime, timezone
 from typing import Callable, Dict, List, Optional, Tuple
+
 import urllib3
 
 from api import fetch_and_cache_all_image_infos
@@ -32,7 +32,8 @@ class WallpaperChanger:
 
         self.current_wallpaper: Optional[str] = None
 
-        self.lock = threading.Lock()
+        self._lock = threading.Lock()
+        self._exit_event = threading.Event()
 
         self._auto_image_switch_lock = threading.Lock()
         self._auto_image_switch_event = threading.Event()
@@ -40,25 +41,28 @@ class WallpaperChanger:
         if self.enabled and not self.paused:
             self._set_auto_image_switch_event()
 
-        self.fetch_event = threading.Event()
-        self.fetch_event.set()
+        self._fetch_event = threading.Event()
+        self._fetch_event.set()
 
         self.downloaded_images: DownloadedImagesList[Tuple[str, str, str]] = (
             DownloadedImagesList()
         )
 
         self.image_queue: FixedSizeQueue[Tuple[str, str]] = FixedSizeQueue([])
-        self.full_update_requred = True
-
         self._load_image_infos()
 
         if self.enabled:
             self.set_current_wallpaper()
 
-        threading.Thread(target=self._fetch_loop, daemon=True).start()
+        self._fetch_thread = threading.Thread(target=self._fetch_loop, daemon=True)
+        self._fetch_thread.start()
 
+        self._auto_image_switch_thread: Optional[threading.Thread] = None
         if config.image_switch_interval:
-            threading.Thread(target=self._auto_image_switch, daemon=True).start()
+            self._auto_image_switch_thread = threading.Thread(
+                target=self._auto_image_switch, daemon=True
+            )
+            self._auto_image_switch_thread.start()
 
     def _load_image_infos(self) -> None:
         cache_hash = get_queries_ratings_hash(
@@ -153,7 +157,9 @@ class WallpaperChanger:
         http = urllib3.PoolManager()
 
         while True:
-            self.fetch_event.wait()
+            self._fetch_event.wait()
+            if self._exit_event.is_set():
+                break
 
             current_size = len(self.downloaded_images)
             position = self.downloaded_images.position_from_start
@@ -167,10 +173,13 @@ class WallpaperChanger:
                     f"Index {position} > {self.threshold} (threshold of batch size), rotating image(s)..."
                 )
             else:
-                self.fetch_event.clear()
+                self._fetch_event.clear()
                 continue
 
             for _ in range(min(to_fetch, self.image_queue.size)):
+                if self._exit_event.is_set():
+                    return
+
                 download_success = False
 
                 img_hash, img_url = self.image_queue.dequeue()
@@ -204,7 +213,7 @@ class WallpaperChanger:
 
                 if download_success:
                     delay = 1
-                    with self.lock:
+                    with self._lock:
                         self.downloaded_images.append((img_hash, img_path, img_url))
 
                         while len(self.downloaded_images) > self.config.max_images:
@@ -221,7 +230,9 @@ class WallpaperChanger:
                                     f"Failed to remove image: {old_img_path} ({e})"
                                 )
                 else:
-                    time.sleep(delay)
+                    if self._exit_event.wait(timeout=delay):
+                        return
+
                     delay = min(delay * 2, max_delay)
 
     def _set_wallpaper(self, img_path: str) -> bool:
@@ -251,7 +262,7 @@ class WallpaperChanger:
         if not self.enabled:
             return
 
-        with self.lock:
+        with self._lock:
             if not len(self.downloaded_images):
                 logger.warning("No images available")
                 return
@@ -260,7 +271,7 @@ class WallpaperChanger:
 
             self.downloaded_images.move_next()
             self.set_current_wallpaper()
-            self.fetch_event.set()
+            self._fetch_event.set()
 
     def next_image_by_hotkey(self) -> None:
         if not self.enabled:
@@ -281,7 +292,7 @@ class WallpaperChanger:
         if not self.enabled:
             return
 
-        with self.lock:
+        with self._lock:
             if not len(self.downloaded_images):
                 logger.warning("No images available")
                 self._show_toast("No images available")
@@ -338,9 +349,18 @@ class WallpaperChanger:
 
     def exit(self) -> None:
         logger.info("Exit wallpaper changer")
-        self.enabled = False
-        self.set_current_wallpaper()
         self._show_toast("Exit wallpaper changer")
+
+        self.enabled = False
+        self._exit_event.set()
+        self._fetch_event.set()
+        self._auto_image_switch_event.set()
+
+        if self._auto_image_switch_thread:
+            self._auto_image_switch_thread.join()
+
+        self._fetch_thread.join()
+        self.set_current_wallpaper()
 
     def toggle_pause(self) -> None:
         if not self.enabled:
@@ -375,6 +395,8 @@ class WallpaperChanger:
 
         while True:
             self._auto_image_switch_event.wait()
+            if self._exit_event.is_set():
+                break
 
             with self._auto_image_switch_lock:
                 if self._auto_image_switch_time:
@@ -388,7 +410,8 @@ class WallpaperChanger:
                 else:
                     sleep_time = self.config.image_switch_interval
 
-            time.sleep(sleep_time)
+            if self._exit_event.wait(timeout=sleep_time):
+                break
 
             go_next = False
             with self._auto_image_switch_lock:

@@ -1,6 +1,10 @@
 import sys
+import threading
 import tkinter as tk
 from typing import Any, Optional
+
+from logger import logger
+from utils import set_dpi_awareness
 
 
 class ToastManager:
@@ -110,3 +114,24 @@ class ToastManager:
         cls._after_id = None
         cls._last_message = None
         cls._repeat_count = 1
+
+    @staticmethod
+    def start_tk_loop(started_event: threading.Event) -> None:
+        try:
+            set_dpi_awareness()
+            root = ToastManager._get_root()
+        except Exception as e:
+            logger.error(f"Failed to start Tk loop: {e}")
+        finally:
+            started_event.set()
+
+        try:
+            root.mainloop()
+        except Exception as e:
+            logger.error(f"Tkinter mainloop error: {e}")
+
+    @classmethod
+    def stop_tk_loop(cls) -> None:
+        if cls._root is not None:
+            cls._root.quit()
+            cls._root = None
