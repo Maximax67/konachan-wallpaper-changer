@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 from typing import Any, Optional
 
@@ -29,7 +30,9 @@ class ToastManager:
         t.overrideredirect(True)
         t.attributes("-topmost", True)
         t.attributes("-alpha", 0.8)
-        t.attributes("-toolwindow", True)
+
+        if sys.platform == "win32":
+            t.attributes("-toolwindow", True)
 
         frame = tk.Frame(t, bg="black", cursor="hand2")
         frame.pack()

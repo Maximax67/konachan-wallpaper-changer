@@ -22,6 +22,12 @@ A Python application that automatically fetches, caches, and rotates wallpapers 
    ```sh
    pip install -r requirements.txt
    ```
+
+   > **Note for Linux users**: You may also need to install `tkinter` separately. On Debian-based systems:
+
+   ```sh
+   sudo apt-get install python3-tk
+   ```
 2. Configure your preferences in `config.json` (auto-generated on first run).
 3. Run the application:
    ```sh
