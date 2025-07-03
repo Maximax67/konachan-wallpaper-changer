@@ -1,13 +1,14 @@
 import sys
 import threading
 import time
+from typing import Callable, Dict
 
-import keyboard
+from pynput import keyboard
 
 from config import load_config
 from constants import SINGLETON_LABEL
 from logger import logger
-from utils import clear_keys, set_dpi_awareness, show_error, start_tk_loop
+from utils import set_dpi_awareness, show_error, start_tk_loop
 from wallpaper_changer import WallpaperChanger
 from singleton import SingleInstance, SingleInstanceException
 
@@ -20,6 +21,8 @@ if __name__ == "__main__":
             if config.default_image:
                 config.default_image = config.default_image.resolve()
 
+            exit_event = threading.Event()
+
             if config.show_toasts:
                 started_event = threading.Event()
                 threading.Thread(
@@ -27,16 +30,21 @@ if __name__ == "__main__":
                 ).start()
                 started_event.wait()
 
-            if sys.platform == "win32":
-                threading.Thread(target=clear_keys, daemon=True).start()
+            hotkey_actions: Dict[str, Callable[[], None]] = {}
 
             changer = WallpaperChanger(config)
+            changer.setup_hotkeys(hotkey_actions)
 
             exit_key = config.hotkeys.exit
+            hotkey_actions[exit_key] = lambda: exit_event.set()
+
+            listener = keyboard.GlobalHotKeys(hotkey_actions)
+            listener.start()
+
             logger.info(f"Wallpaper changer running. Press {exit_key} to exit")
 
             try:
-                keyboard.wait(exit_key)
+                exit_event.wait()
             except KeyboardInterrupt:
                 pass
             except Exception as e:
@@ -44,6 +52,7 @@ if __name__ == "__main__":
                 show_error("Fatal Error", str(e))
                 sys.exit(1)
 
+            listener.stop()
             changer.exit()
 
             if config.show_toasts:

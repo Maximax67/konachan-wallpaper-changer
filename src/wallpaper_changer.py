@@ -3,10 +3,8 @@ import random
 import threading
 import time
 from datetime import datetime, timezone
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 import urllib3
-
-import keyboard
 
 from api import fetch_and_cache_all_image_infos
 from config import Config
@@ -53,7 +51,6 @@ class WallpaperChanger:
         self.full_update_requred = True
 
         self._load_image_infos()
-        self._setup_hotkeys()
 
         if self.enabled:
             self.set_current_wallpaper()
@@ -404,28 +401,28 @@ class WallpaperChanger:
             if go_next:
                 self.next_image()
 
-    def _setup_hotkeys(self) -> None:
+    def setup_hotkeys(self, hotkey_actions: Dict[str, Callable[[], None]]) -> None:
         hk = self.config.hotkeys
 
         def _hotkey(func_name: str, action: Callable[[], None]) -> None:
             logger.debug(f"Hotkey: {func_name}")
             action()
 
-        keyboard.add_hotkey(hk.next, lambda: _hotkey("next", self.next_image_by_hotkey))
-        keyboard.add_hotkey(hk.back, lambda: _hotkey("back", self.prev_image))
+        hotkey_actions[hk.next] = lambda: _hotkey("next", self.next_image_by_hotkey)
+        hotkey_actions[hk.back] = lambda: _hotkey("back", self.prev_image)
 
         if hk.pause == hk.unpause:
-            keyboard.add_hotkey(
-                hk.pause, lambda: _hotkey("toggle pause", self.toggle_pause)
+            hotkey_actions[hk.pause] = lambda: _hotkey(
+                "toggle pause", self.toggle_pause
             )
         else:
-            keyboard.add_hotkey(hk.pause, lambda: _hotkey("pause", self.pause))
-            keyboard.add_hotkey(hk.unpause, lambda: _hotkey("unpause", self.unpause))
+            hotkey_actions[hk.pause] = lambda: _hotkey("pause", self.pause)
+            hotkey_actions[hk.unpause] = lambda: _hotkey("unpause", self.unpause)
 
         if hk.disable == hk.enable:
-            keyboard.add_hotkey(
-                hk.disable, lambda: _hotkey("toggle enable", self.toggle_enable)
+            hotkey_actions[hk.disable] = lambda: _hotkey(
+                "toggle enable", self.toggle_enable
             )
         else:
-            keyboard.add_hotkey(hk.disable, lambda: _hotkey("disable", self.disable))
-            keyboard.add_hotkey(hk.enable, lambda: _hotkey("enable", self.enable))
+            hotkey_actions[hk.disable] = lambda: _hotkey("disable", self.disable)
+            hotkey_actions[hk.enable] = lambda: _hotkey("enable", self.enable)

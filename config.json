@@ -12,13 +12,13 @@
     "image_switch_interval": 300,
     "wallpapers_folder_path": "wallpapers",
     "hotkeys": {
-        "next": "ctrl+alt+i",
-        "back": "ctrl+alt+u",
-        "pause": "ctrl+alt+p",
-        "unpause": "ctrl+alt+p",
-        "disable": "ctrl+alt+e",
-        "enable": "ctrl+alt+e",
-        "exit": "ctrl+shift+alt+e"
+        "next": "<ctrl>+<alt>+i",
+        "back": "<ctrl>+<alt>+u",
+        "pause": "<ctrl>+<alt>+p",
+        "unpause": "<ctrl>+<alt>+p",
+        "disable": "<ctrl>+<alt>+e",
+        "enable": "<ctrl>+<alt>+e",
+        "exit": "<ctrl>+<shift>+<alt>+e"
     },
     "default_image": null,
     "ratings": [

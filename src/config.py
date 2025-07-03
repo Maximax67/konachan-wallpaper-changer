@@ -17,13 +17,13 @@ class Hotkeys:
     exit: str
 
     DEFAULTS = {
-        "next": "ctrl+alt+i",
-        "back": "ctrl+alt+u",
-        "pause": "ctrl+alt+p",
-        "unpause": "ctrl+alt+p",
-        "disable": "ctrl+alt+e",
-        "enable": "ctrl+alt+e",
-        "exit": "ctrl+shift+alt+e",
+        "next": "<ctrl>+<alt>+i",
+        "back": "<ctrl>+<alt>+u",
+        "pause": "<ctrl>+<alt>+p",
+        "unpause": "<ctrl>+<alt>+p",
+        "disable": "<ctrl>+<alt>+e",
+        "enable": "<ctrl>+<alt>+e",
+        "exit": "<ctrl>+<shift>+<alt>+e",
     }
 
     ALLOWED_PAIRS = {frozenset(["pause", "unpause"]), frozenset(["enable", "disable"])}

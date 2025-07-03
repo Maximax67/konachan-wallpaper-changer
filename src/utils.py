@@ -6,12 +6,9 @@ import re
 import subprocess
 import sys
 import threading
-import time
 import tkinter as tk
 from tkinter import messagebox
 from typing import Any, Dict, List, Optional, cast
-
-import keyboard
 
 from constants import IMAGE_INFOS_CACHE
 from logger import logger
@@ -53,26 +50,6 @@ def start_tk_loop(started_event: threading.Event) -> None:
         root.mainloop()
     except Exception as e:
         logger.error(f"Tkinter mainloop error: {e}")
-
-
-if sys.platform == "win32":
-
-    def clear_keys() -> None:
-        while True:
-            # Hotkeys stop working after windows locks & unlocks
-            # https://github.com/boppreh/keyboard/issues/223
-            with keyboard._pressed_events_lock:
-                for k in list(keyboard._pressed_events.keys()):
-                    item = keyboard._pressed_events[k]
-                    if time.time() - item.time > 4:
-                        del keyboard._pressed_events[k]
-
-            time.sleep(1)
-
-else:
-    # Dummy for non-Windows platforms
-    def clear_keys() -> None:
-        pass
 
 
 def show_error(title: str, message: str) -> None:

@@ -52,7 +52,7 @@ The application is configured via a `config.json` file. Here are the available o
 
 
 | Key                      | Type                | Description                                                                  |
-| ------------------------ | ------------------- | ---------------------------------------------------------------------------- |
+|--------------------------|---------------------|------------------------------------------------------------------------------|
 | `enabled_on_startup`     | `bool`              | Start the app enabled (wallpaper changing active)                            |
 | `paused_on_startup`      | `bool`              | Start the app paused (no auto wallpaper switching)                           |
 | `show_toasts`            | `bool`              | Show toast notifications for actions                                         |
@@ -90,13 +90,13 @@ The application is configured via a `config.json` file. Here are the available o
     "image_switch_interval": 300,
     "wallpapers_folder_path": "wallpapers",
     "hotkeys": {
-        "next": "ctrl+alt+i",
-        "back": "ctrl+alt+u",
-        "pause": "ctrl+alt+p",
-        "unpause": "ctrl+alt+p",
-        "disable": "ctrl+alt+e",
-        "enable": "ctrl+alt+e",
-        "exit": "ctrl+shift+alt+e"
+        "next": "<ctrl>+<alt>+i",
+        "back": "<ctrl>+<alt>+u",
+        "pause": "<ctrl>+<alt>+p",
+        "unpause": "<ctrl>+<alt>+p",
+        "disable": "<ctrl>+<alt>+e",
+        "enable": "<ctrl>+<alt>+e",
+        "exit": "<ctrl>+<shift>+<alt>+e"
     },
     "default_image": null,
     "ratings": [
@@ -112,15 +112,15 @@ The application is configured via a `config.json` file. Here are the available o
 
 The default `hotkeys` object contains the following keys:
 
-| Key       | Default Value      | Description               |
-|-----------|--------------------|---------------------------|
-| `next`    | `ctrl+alt+i`       | Next wallpaper            |
-| `back`    | `ctrl+alt+u`       | Previous wallpaper        |
-| `pause`   | `ctrl+alt+p`       | Pause auto-switching      |
-| `unpause` | `ctrl+alt+p`       | Unpause auto-switching    |
-| `disable` | `ctrl+alt+e`       | Disable wallpaper changer |
-| `enable`  | `ctrl+alt+e`       | Enable wallpaper changer  |
-| `exit`    | `ctrl+shift+alt+e` | Exit the application      |
+| Key       | Default Value            | Description               |
+|-----------|--------------------------|---------------------------|
+| `next`    | `<ctrl>+<alt>+i`         | Next wallpaper            |
+| `back`    | `<ctrl>+<alt>+u`         | Previous wallpaper        |
+| `pause`   | `<ctrl>+<alt>+p`         | Pause auto-switching      |
+| `unpause` | `<ctrl>+<alt>+p`         | Unpause auto-switching    |
+| `disable` | `<ctrl>+<alt>+e`         | Disable wallpaper changer |
+| `enable`  | `<ctrl>+<alt>+e`         | Enable wallpaper changer  |
+| `exit`    | `<ctrl>+<shift>+<alt>+e` | Exit the application      |
 
 Only the pairs `pause`, `unpause` and `enable`, `disable` are allowed to share the same hotkey string. No other hotkeys should be duplicates.
 
