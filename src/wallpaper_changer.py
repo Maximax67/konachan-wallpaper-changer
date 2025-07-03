@@ -16,8 +16,9 @@ from utils import (
     get_queries_ratings_hash,
     load_image_infos_cache,
     save_image_infos_cache,
-    set_wallpaper,
+    show_error,
 )
+from wallpaper import set_wallpaper
 
 
 class WallpaperChanger:
@@ -245,24 +246,25 @@ class WallpaperChanger:
 
                     delay = min(delay * 2, max_delay)
 
-    def _set_wallpaper(self, img_path: str) -> bool:
+    def _set_wallpaper(self, img_path: str) -> None:
         if img_path == self.current_wallpaper:
-            return False
+            return
 
-        set_wallpaper(img_path)
+        is_first_change = self.current_wallpaper is None
         self.current_wallpaper = img_path
 
-        return True
+        logger.info(f"Setting wallpaper: {img_path}")
 
-    def set_current_wallpaper(self) -> bool:
+        if not set_wallpaper(img_path, is_first_change):
+            show_error("Failed to set wallpaper", "Please check the app.log file for more details.")
+
+    def set_current_wallpaper(self) -> None:
         if self.enabled and len(self.downloaded_images):
             current = self.downloaded_images.current()
             if current:
-                return self._set_wallpaper(current[1])
+                self._set_wallpaper(current[1])
         elif not self.enabled and self.config.default_image:
-            return self._set_wallpaper(str(self.config.default_image))
-
-        return False
+            self._set_wallpaper(str(self.config.default_image))
 
     def _show_toast(self, message: str, duration: Optional[int] = 2000) -> None:
         if self.config.show_toasts:
@@ -315,10 +317,9 @@ class WallpaperChanger:
 
             if self.downloaded_images.position_from_start:
                 self.downloaded_images.move_prev()
-
-                if self.set_current_wallpaper():
-                    self._show_toast("Previous wallpaper")
-                    return
+                self.set_current_wallpaper()
+                self._show_toast("Previous wallpaper")
+                return
 
             self._show_toast("No previous wallpaper")
 

@@ -3,7 +3,6 @@ import hashlib
 import json
 import os
 import re
-import subprocess
 import sys
 import tkinter as tk
 from tkinter import messagebox
@@ -13,12 +12,10 @@ from constants import IMAGE_INFOS_CACHE
 from logger import logger
 
 
-if sys.platform == "win32":
-    import ctypes
-
-
 def set_dpi_awareness() -> None:
     if sys.platform == "win32":
+        import ctypes
+
         # PROCESS_SYSTEM_DPI_AWARE
         try:
             # Skip setting DPI awareness if running from a bundled .exe
@@ -40,44 +37,6 @@ def show_error(title: str, message: str) -> None:
     root.withdraw()
     messagebox.showerror(title, message)
     root.destroy()
-
-
-def set_wallpaper(image_path: str) -> None:
-    logger.info(f"Setting wallpaper: {image_path}")
-
-    if sys.platform == "win32":
-        ctypes.windll.user32.SystemParametersInfoW(0x14, 0, image_path, 0x01)
-    elif sys.platform == "darwin":  # macOS
-        try:
-            script = f"""
-            tell application "System Events"
-                set picture of every desktop to "{image_path}"
-            end tell
-            """
-            subprocess.run(["osascript", "-e", script], check=True)
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to set wallpaper on macOS: {e}")
-    elif sys.platform.startswith("linux"):
-        try:
-            subprocess.run(
-                [
-                    "gsettings",
-                    "set",
-                    "org.gnome.desktop.background",
-                    "picture-uri",
-                    f"file://{image_path}",
-                ],
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            logger.warning("Failed to set wallpaper using gsettings. Trying feh...")
-
-            try:
-                subprocess.run(["feh", "--bg-scale", image_path], check=True)
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Failed to set wallpaper on Linux: {e}")
-    else:
-        logger.error(f"Unsupported platform: {sys.platform}")
 
 
 def parse_duration(s: str) -> timedelta:
