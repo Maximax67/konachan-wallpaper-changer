@@ -368,19 +368,17 @@ class WallpaperChanger:
         self._show_toast("Enabled")
 
     def exit(self) -> None:
-        logger.info("Exit wallpaper changer")
-        self._show_toast("Exit wallpaper changer")
-
         self.enabled = False
         self._exit_event.set()
         self._fetch_event.set()
         self._auto_image_switch_event.set()
 
+        self.set_current_wallpaper()
+
         if self._auto_image_switch_thread:
             self._auto_image_switch_thread.join()
 
         self._fetch_thread.join()
-        self.set_current_wallpaper()
 
     def toggle_pause(self) -> None:
         if not self.enabled:

@@ -49,14 +49,12 @@ if __name__ == "__main__":
 
             logger.info(f"Wallpaper changer running. Press {exit_key} to exit")
 
-            try:
-                exit_event.wait()
-            except KeyboardInterrupt:
-                pass
-            except Exception as e:
-                logger.error(e)
-                show_error("Fatal Error", str(e))
-                sys.exit(1)
+            exit_event.wait()
+
+            logger.info("Exit wallpaper changer")
+
+            if config.show_toasts:
+                ToastManager.show("Exit wallpaper changer...", None)
 
             exit_time = datetime.now()
             changer.exit()
@@ -66,6 +64,8 @@ if __name__ == "__main__":
                 remaining = 2 - elapsed
                 if remaining > 0:
                     time.sleep(remaining)
+
+                ToastManager.hide()
     except SingleInstanceException:
         set_dpi_awareness()
         show_error("Already Running", "Konachan Wallpaper Changer is already running!")

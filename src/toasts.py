@@ -25,6 +25,46 @@ class ToastManager:
 
         return cls._root
 
+    @staticmethod
+    def _calculate_toast_geometry(t: tk.Toplevel) -> str:
+        window_width = t.winfo_width()
+        window_height = t.winfo_height()
+
+        if window_width <= 1 or window_height <= 1:
+            t.update_idletasks()
+            window_width = t.winfo_width()
+            window_height = t.winfo_height()
+
+        margin_x = 50
+        margin_y = 100
+
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                from ctypes import wintypes
+
+                # Get the work area of the screen (screen size minus taskbar and dock)
+                rect = wintypes.RECT()
+                res = ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(rect), 0)
+                if res:
+                    work_width = rect.right - rect.left
+                    work_height = rect.bottom - rect.top
+
+                    x = work_width - window_width
+                    y = work_height - window_height
+
+                    return f"+{x}+{y}"
+            except Exception:
+                pass
+
+        screen_width = t.winfo_screenwidth()
+        screen_height = t.winfo_screenheight()
+
+        x = screen_width - window_width - margin_x
+        y = screen_height - window_height - margin_y
+
+        return f"+{x}+{y}"
+
     @classmethod
     def _create_toast_window(cls) -> None:
         root = cls._get_root()
@@ -91,11 +131,9 @@ class ToastManager:
         t.deiconify()
 
         t.update_idletasks()
-        window_width = t.winfo_width()
-        window_height = t.winfo_height()
-        x = t.winfo_screenwidth() - window_width - 20
-        y = t.winfo_screenheight() - window_height - 100
-        t.geometry(f"+{x}+{y}")
+
+        new_geometry = ToastManager._calculate_toast_geometry(t)
+        t.geometry(new_geometry)
 
         if cls._after_id:
             try:
