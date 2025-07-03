@@ -190,26 +190,36 @@ class WallpaperChanger:
                 logger.debug(f"Downloading image: {img_url}")
                 try:
                     response: urllib3.HTTPResponse = http.request(
-                        "GET", img_url, timeout=30.0, preload_content=False
+                        "GET", img_url, timeout=30, preload_content=False
                     )
 
                     if response.status == 200:
+                        content_length = int(response.headers.get("Content-Length", 0))
+                        downloaded = 0
+
                         with open(img_path, "wb") as f:
                             for chunk in response.stream(16384):
                                 f.write(chunk)
+                                downloaded += len(chunk)
 
-                        download_success = True
-                        logger.debug(f"Saved image: {img_path}")
+                        if content_length and downloaded != content_length:
+                            logger.error(
+                                f"Incomplete download for {img_url}: {downloaded}/{content_length} bytes"
+                            )
+                            self.image_queue.enqueue((img_hash, img_url))
+                        else:
+                            download_success = True
+                            logger.debug(f"Saved image: {img_path}")
                     else:
                         self.image_queue.enqueue((img_hash, img_url))
                         logger.error(
                             f"Failed to download image: {img_url} (status {response.status})"
                         )
-
-                    response.release_conn()
                 except Exception as e:
                     self.image_queue.enqueue((img_hash, img_url))
                     logger.error(f"Error downloading image: {img_url} ({e})")
+                finally:
+                    response.release_conn()
 
                 if download_success:
                     delay = 1
