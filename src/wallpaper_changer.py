@@ -208,6 +208,15 @@ class WallpaperChanger:
                                 f"Incomplete download for {img_url}: {downloaded}/{content_length} bytes"
                             )
                             self.image_queue.enqueue((img_hash, img_url))
+
+                            try:
+                                if os.path.exists(img_path):
+                                    os.remove(img_path)
+                                    logger.debug(f"Removed incomplete downloaded image: {img_path}")
+                            except Exception as e:
+                                logger.warning(
+                                    f"Failed to remove incomplete downloaded image: {img_path} ({e})"
+                                )
                         else:
                             download_success = True
                             logger.debug(f"Saved image: {img_path}")
