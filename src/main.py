@@ -25,8 +25,6 @@ if __name__ == "__main__":
             if config.default_image:
                 config.default_image = config.default_image.resolve()
 
-            exit_event = threading.Event()
-
             if config.show_toasts:
                 started_event = threading.Event()
                 threading.Thread(
@@ -42,14 +40,23 @@ if __name__ == "__main__":
             changer.setup_hotkeys(hotkey_actions)
 
             exit_key = config.hotkeys.exit
-            hotkey_actions[exit_key] = lambda: exit_event.set()
+            exit_event = threading.Event()
+            if exit_key:
+                hotkey_actions[exit_key] = lambda: exit_event.set()
 
             listener = keyboard.GlobalHotKeys(hotkey_actions)
             listener.start()
 
-            logger.info(f"Wallpaper changer running. Press {exit_key} to exit")
+            if exit_key:
+                logger.info(f"Wallpaper changer running. Press {exit_key} to exit")
+            else:
+                logger.info("Wallpaper changer running")
 
-            exit_event.wait()
+            try:
+                exit_event.wait()
+            except KeyboardInterrupt:
+                logger.info("Interrupted")
+                pass
 
             logger.info("Exit wallpaper changer")
 

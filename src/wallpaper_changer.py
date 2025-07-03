@@ -212,7 +212,9 @@ class WallpaperChanger:
                             try:
                                 if os.path.exists(img_path):
                                     os.remove(img_path)
-                                    logger.debug(f"Removed incomplete downloaded image: {img_path}")
+                                    logger.debug(
+                                        f"Removed incomplete downloaded image: {img_path}"
+                                    )
                             except Exception as e:
                                 logger.warning(
                                     f"Failed to remove incomplete downloaded image: {img_path} ({e})"
@@ -265,7 +267,10 @@ class WallpaperChanger:
         logger.info(f"Setting wallpaper: {img_path}")
 
         if not set_wallpaper(img_path, is_first_change):
-            show_error("Failed to set wallpaper", "Please check the app.log file for more details.")
+            show_error(
+                "Failed to set wallpaper",
+                "Please check the app.log file for more details.",
+            )
 
     def set_current_wallpaper(self) -> None:
         if self.enabled and len(self.downloaded_images):
@@ -449,21 +454,30 @@ class WallpaperChanger:
             logger.debug(f"Hotkey: {func_name}")
             action()
 
-        hotkey_actions[hk.next] = lambda: _hotkey("next", self.next_image_by_hotkey)
-        hotkey_actions[hk.back] = lambda: _hotkey("back", self.prev_image)
+        if hk.next:
+            hotkey_actions[hk.next] = lambda: _hotkey("next", self.next_image_by_hotkey)
 
-        if hk.pause == hk.unpause:
+        if hk.back:
+            hotkey_actions[hk.back] = lambda: _hotkey("back", self.prev_image)
+
+        if hk.pause == hk.unpause and hk.pause:
             hotkey_actions[hk.pause] = lambda: _hotkey(
                 "toggle pause", self.toggle_pause
             )
         else:
-            hotkey_actions[hk.pause] = lambda: _hotkey("pause", self.pause)
-            hotkey_actions[hk.unpause] = lambda: _hotkey("unpause", self.unpause)
+            if hk.pause:
+                hotkey_actions[hk.pause] = lambda: _hotkey("pause", self.pause)
 
-        if hk.disable == hk.enable:
+            if hk.unpause:
+                hotkey_actions[hk.unpause] = lambda: _hotkey("unpause", self.unpause)
+
+        if hk.disable == hk.enable and hk.disable:
             hotkey_actions[hk.disable] = lambda: _hotkey(
                 "toggle enable", self.toggle_enable
             )
         else:
-            hotkey_actions[hk.disable] = lambda: _hotkey("disable", self.disable)
-            hotkey_actions[hk.enable] = lambda: _hotkey("enable", self.enable)
+            if hk.disable:
+                hotkey_actions[hk.disable] = lambda: _hotkey("disable", self.disable)
+
+            if hk.enable:
+                hotkey_actions[hk.enable] = lambda: _hotkey("enable", self.enable)

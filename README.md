@@ -122,7 +122,7 @@ The default `hotkeys` object contains the following keys:
 | `enable`  | `<ctrl>+<alt>+e`         | Enable wallpaper changer  |
 | `exit`    | `<ctrl>+<shift>+<alt>+e` | Exit the application      |
 
-Only the pairs `pause`, `unpause` and `enable`, `disable` are allowed to share the same hotkey string. No other hotkeys should be duplicates.
+Only the pairs `pause`, `unpause` and `enable`, `disable` are allowed to share the same hotkey string. No other hotkeys should be duplicates. Each hotkey value can also be set to null to disable that particular hotkey.
 
 ## Adding to Startup (Windows)
 

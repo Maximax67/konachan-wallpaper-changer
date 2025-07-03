@@ -8,13 +8,13 @@ from utils import parse_duration
 
 
 class Hotkeys:
-    next: str
-    back: str
-    pause: str
-    unpause: str
-    disable: str
-    enable: str
-    exit: str
+    next: Optional[str]
+    back: Optional[str]
+    pause: Optional[str]
+    unpause: Optional[str]
+    disable: Optional[str]
+    enable: Optional[str]
+    exit: Optional[str]
 
     DEFAULTS = {
         "next": "<ctrl>+<alt>+i",
@@ -28,7 +28,7 @@ class Hotkeys:
 
     ALLOWED_PAIRS = {frozenset(["pause", "unpause"]), frozenset(["enable", "disable"])}
 
-    def __init__(self, **kwargs: str) -> None:
+    def __init__(self, **kwargs: Optional[str]) -> None:
         invalid_keys = set(kwargs) - self.DEFAULTS.keys()
         if invalid_keys:
             raise ValueError(
@@ -39,6 +39,9 @@ class Hotkeys:
 
         seen: Dict[str, str] = {}
         for action, hotkey in keys.items():
+            if hotkey is None:
+                continue
+
             if hotkey in seen:
                 prev_action = seen[hotkey]
                 pair = frozenset([prev_action, action])
