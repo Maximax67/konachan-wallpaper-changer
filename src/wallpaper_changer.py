@@ -78,7 +78,7 @@ class WallpaperChanger:
             stored_timestamp = cache.get("timestamp")
             if stored_timestamp:
                 current_time = datetime.now(timezone.utc)
-                stored_time = datetime.fromtimestamp(stored_timestamp)
+                stored_time = datetime.fromtimestamp(stored_timestamp, tz=timezone.utc)
                 cache_expired = (
                     current_time > stored_time + self.config.cache_refresh_interval
                 )
