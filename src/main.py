@@ -10,7 +10,7 @@ from config import load_config
 from constants import SINGLETON_LABEL
 from logger import logger
 from toasts import ToastManager
-from utils import set_dpi_awareness, show_error
+from utils import set_dpi_awareness, show_error, windows_console_exit_handler
 from wallpaper_changer import WallpaperChanger
 from singleton import SingleInstance, SingleInstanceException
 
@@ -41,6 +41,9 @@ if __name__ == "__main__":
 
             exit_key = config.hotkeys.exit
             exit_event = threading.Event()
+
+            windows_console_exit_handler(exit_event)
+
             if exit_key:
                 hotkey_actions[exit_key] = lambda: exit_event.set()
 
@@ -55,8 +58,7 @@ if __name__ == "__main__":
             try:
                 exit_event.wait()
             except KeyboardInterrupt:
-                logger.info("Interrupted")
-                pass
+                logger.info("Keyboard interrupt")
 
             logger.info("Exit wallpaper changer")
 

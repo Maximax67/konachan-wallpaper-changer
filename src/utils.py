@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sys
+import threading
 import tkinter as tk
 from tkinter import messagebox
 from typing import Any, Dict, List, Optional, cast
@@ -11,11 +12,12 @@ from typing import Any, Dict, List, Optional, cast
 from constants import IMAGE_INFOS_CACHE
 from logger import logger
 
+if sys.platform == "win32":
+    import ctypes
+
 
 def set_dpi_awareness() -> None:
     if sys.platform == "win32":
-        import ctypes
-
         # PROCESS_SYSTEM_DPI_AWARE
         try:
             # Skip setting DPI awareness if running from a bundled .exe
@@ -30,6 +32,30 @@ def set_dpi_awareness() -> None:
     elif sys.platform.startswith("linux"):
         os.environ["GDK_SCALE"] = "1"
         os.environ["QT_SCALE_FACTOR"] = "1"
+
+
+_exit_handler_ref = None  # global reference to handler to prevent GC
+
+
+def windows_console_exit_handler(exit_event: threading.Event) -> None:
+    if sys.platform != "win32":
+        return
+
+    def console_ctrl_handler(ctrl_type: int) -> bool:
+        if ctrl_type in (0, 1):  # CTRL_C_EVENT = 0, CTRL_BREAK_EVENT = 1
+            logger.info("Console control event received")
+            exit_event.set()
+            return True
+
+        return False
+
+    kernel32 = ctypes.windll.kernel32
+    HandlerRoutine = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)
+    handler = HandlerRoutine(console_ctrl_handler)
+    kernel32.SetConsoleCtrlHandler(handler, True)
+
+    global _exit_handler_ref
+    _exit_handler_ref = handler
 
 
 def show_error(title: str, message: str) -> None:
