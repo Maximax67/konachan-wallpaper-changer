@@ -21,7 +21,7 @@ if __name__ == "__main__":
         with SingleInstance(SINGLETON_LABEL):
             config = load_config()
 
-            config.wallpapers_folder_path = config.wallpapers_folder_path.resolve()
+            config.cached_wallpapers_path = config.cached_wallpapers_path.resolve()
             if config.default_image:
                 config.default_image = config.default_image.resolve()
 

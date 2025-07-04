@@ -45,7 +45,9 @@ class ToastManager:
 
                 # Get the work area of the screen (screen size minus taskbar and dock)
                 rect = wintypes.RECT()
-                res = ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(rect), 0)
+                res = ctypes.windll.user32.SystemParametersInfoW(
+                    0x0030, 0, ctypes.byref(rect), 0
+                )
                 if res:
                     work_width = rect.right - rect.left
                     work_height = rect.bottom - rect.top
@@ -155,18 +157,21 @@ class ToastManager:
 
     @staticmethod
     def start_tk_loop(started_event: threading.Event) -> None:
+        root: Optional[tk.Tk] = None
+
         try:
             set_dpi_awareness()
             root = ToastManager._get_root()
         except Exception as e:
-            logger.error(f"Failed to start Tk loop: {e}")
+            logger.error(f"Failed to start Tk loop: {e}", stack_info=True)
         finally:
             started_event.set()
 
-        try:
-            root.mainloop()
-        except Exception as e:
-            logger.error(f"Tkinter mainloop error: {e}")
+        if root is not None:
+            try:
+                root.mainloop()
+            except Exception as e:
+                logger.error(f"Tkinter mainloop error: {e}", stack_info=True)
 
     @classmethod
     def stop_tk_loop(cls) -> None:

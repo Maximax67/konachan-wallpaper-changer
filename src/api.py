@@ -38,7 +38,6 @@ def fetch_image_infos(
                 break
 
             posts = json.loads(response.data.decode("utf-8"))
-            response.release_conn()
 
             if not posts:
                 break
@@ -60,9 +59,11 @@ def fetch_image_infos(
             page += 1
 
         except Exception as e:
-            logger.error(e)
+            logger.error(e, stack_info=True)
             time.sleep(1)
             break
+        finally:
+            response.release_conn()
 
 
 def fetch_and_cache_all_image_infos(

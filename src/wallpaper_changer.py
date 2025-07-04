@@ -1,8 +1,9 @@
 import os
 import random
+import shutil
 import threading
 from datetime import datetime, timezone
-from typing import Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import urllib3
 
@@ -24,7 +25,7 @@ from wallpaper import set_wallpaper
 class WallpaperChanger:
     def __init__(self, config: Config):
         self.config = config
-        self.config.wallpapers_folder_path.mkdir(exist_ok=True)
+        self.config.cached_wallpapers_path.mkdir(exist_ok=True)
 
         self.threshold = int(config.max_images * config.old_images_threshold)
 
@@ -121,7 +122,7 @@ class WallpaperChanger:
         logger.info(f"Total images: {len(image_infos)}")
 
         temp_images_list: List[Tuple[str, str, str, float]] = []
-        for file in self.config.wallpapers_folder_path.iterdir():
+        for file in self.config.cached_wallpapers_path.iterdir():
             if file.is_file():
                 image_hash = file.stem
                 image_url = image_infos.get(image_hash)
@@ -186,7 +187,7 @@ class WallpaperChanger:
                 img_hash, img_url = self.image_queue.dequeue()
                 ext = os.path.splitext(img_url)[1]
                 img_path = os.path.join(
-                    self.config.wallpapers_folder_path, f"{img_hash}{ext}"
+                    self.config.cached_wallpapers_path, f"{img_hash}{ext}"
                 )
                 logger.debug(f"Downloading image: {img_url}")
                 try:
@@ -229,7 +230,17 @@ class WallpaperChanger:
                         )
                 except Exception as e:
                     self.image_queue.enqueue((img_hash, img_url))
-                    logger.error(f"Error downloading image: {img_url} ({e})")
+                    logger.error(
+                        f"Error downloading image: {img_url} ({e})", stack_info=True
+                    )
+
+                    if os.path.exists(img_path):
+                        try:
+                            os.remove(img_path)
+                        except Exception:
+                            logger.warning(
+                                f"Failed to remove failed to download image: {img_path} ({e})"
+                            )
                 finally:
                     response.release_conn()
 
@@ -284,13 +295,17 @@ class WallpaperChanger:
         if self.config.show_toasts:
             ToastManager.show(message, duration)
 
+    def _warn_no_images_downloaded(self) -> None:
+        logger.warning("No downloaded images")
+        self._show_toast("No downloaded images")
+
     def next_image(self) -> None:
         if not self.enabled:
             return
 
         with self._lock:
             if not len(self.downloaded_images):
-                logger.warning("No images available")
+                self._warn_no_images_downloaded()
                 return
 
             logger.debug("Switching to next image")
@@ -304,8 +319,7 @@ class WallpaperChanger:
             return
 
         if not len(self.downloaded_images):
-            logger.warning("No images available")
-            self._show_toast("No images available")
+            self._warn_no_images_downloaded()
             return
 
         with self._auto_image_switch_lock:
@@ -320,8 +334,7 @@ class WallpaperChanger:
 
         with self._lock:
             if not len(self.downloaded_images):
-                logger.warning("No images available")
-                self._show_toast("No images available")
+                self._warn_no_images_downloaded()
                 return
 
             logger.debug("Switching to previous image")
@@ -335,6 +348,7 @@ class WallpaperChanger:
                 self._show_toast("Previous wallpaper")
                 return
 
+            logger.warning("No previous wallpaper")
             self._show_toast("No previous wallpaper")
 
     def pause(self) -> None:
@@ -354,6 +368,7 @@ class WallpaperChanger:
         self.paused = False
         if self.enabled:
             self._set_auto_image_switch_event(datetime.now())
+
         self._show_toast("Unpaused")
 
     def disable(self) -> None:
@@ -447,6 +462,98 @@ class WallpaperChanger:
             if go_next:
                 self.next_image()
 
+    def _handle_file_action(
+        self, action: Callable[[], None], success_msg: str, error_msg: str
+    ) -> None:
+        try:
+            action()
+            logger.info(success_msg)
+            self._show_toast(success_msg)
+        except Exception as e:
+            logger.warning(f"{error_msg}: {e}")
+            self._show_toast(f"{error_msg}: {e}")
+
+    def _get_current_image_paths(self) -> Union[Tuple[None, None], Tuple[str, str]]:
+        image_info = self.downloaded_images.current()
+        if image_info is None:
+            self._warn_no_images_downloaded()
+            return None, None
+
+        image_path = image_info[1]
+        filename = os.path.basename(image_path)
+        saved_image_path = os.path.join(
+            self.config.user_saved_wallpapers_path, filename
+        )
+
+        return image_path, saved_image_path
+
+    def _handle_missing_source(self, path: str, context: str) -> None:
+        msg = f"{context} not found"
+        logger.warning(f"{msg}: {path}")
+        self._show_toast(msg)
+
+    @staticmethod
+    def _save_image(image_path: str, saved_image_path: str) -> None:
+        os.makedirs(os.path.dirname(saved_image_path), exist_ok=True)
+        shutil.copy(image_path, saved_image_path)
+
+    def save(self) -> None:
+        if not self.enabled:
+            return
+
+        image_path, saved_image_path = self._get_current_image_paths()
+        if image_path is None or saved_image_path is None:
+            return
+
+        if os.path.exists(image_path):
+            self._handle_file_action(
+                action=lambda: self._save_image(image_path, saved_image_path),
+                success_msg="Wallpaper saved",
+                error_msg="Failed to save",
+            )
+        else:
+            self._handle_missing_source(image_path, "Source image")
+
+    def delete(self) -> None:
+        if not self.enabled:
+            return
+
+        _, saved_image_path = self._get_current_image_paths()
+        if saved_image_path is None:
+            return
+
+        if os.path.exists(saved_image_path):
+            self._handle_file_action(
+                action=lambda: os.remove(saved_image_path),
+                success_msg="Wallpaper deleted",
+                error_msg="Failed to delete",
+            )
+        else:
+            self._handle_missing_source(saved_image_path, "Saved image")
+
+    def toggle_save(self) -> None:
+        if not self.enabled:
+            return
+
+        image_path, saved_image_path = self._get_current_image_paths()
+        if image_path is None or saved_image_path is None:
+            return
+
+        if os.path.exists(saved_image_path):
+            self._handle_file_action(
+                action=lambda: os.remove(saved_image_path),
+                success_msg="Wallpaper deleted",
+                error_msg="Failed to delete",
+            )
+        elif os.path.exists(image_path):
+            self._handle_file_action(
+                action=lambda: self._save_image(image_path, saved_image_path),
+                success_msg="Wallpaper saved",
+                error_msg="Failed to save",
+            )
+        else:
+            self._handle_missing_source(image_path, "Source image")
+
     def setup_hotkeys(self, hotkey_actions: Dict[str, Callable[[], None]]) -> None:
         hk = self.config.hotkeys
 
@@ -513,4 +620,15 @@ class WallpaperChanger:
             self.disable,
             "toggle enable",
             self.toggle_enable,
+        )
+
+        bind_toggle_group(
+            hk.save,
+            hk.delete,
+            "save",
+            self.save,
+            "delete",
+            self.delete,
+            "toggle save",
+            self.toggle_save,
         )

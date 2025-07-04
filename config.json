@@ -10,7 +10,8 @@
     "max_images": 20,
     "old_images_threshold": 0.2,
     "image_switch_interval": 300,
-    "wallpapers_folder_path": "wallpapers",
+    "cached_wallpapers_path": "wallpapers/cached",
+    "user_saved_wallpapers_path": "wallpapers",
     "hotkeys": {
         "next": [
             "<ctrl>+<alt>+i"
@@ -32,6 +33,12 @@
         ],
         "exit": [
             "<ctrl>+<shift>+<alt>+e"
+        ],
+        "save": [
+            "<ctrl>+<alt>+l"
+        ],
+        "delete": [
+            "<ctrl>+<alt>+l"
         ]
     },
     "default_image": null,
@@ -39,6 +46,6 @@
         "s"
     ],
     "min_score": null,
-    "max_image_size": null,
+    "max_image_size": 20971520,
     "cache_refresh_interval": "7d"
 }

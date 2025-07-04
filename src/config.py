@@ -15,6 +15,8 @@ class Hotkeys:
     disable: List[str]
     enable: List[str]
     exit: List[str]
+    save: List[str]
+    delete: List[str]
 
     DEFAULTS: Dict[str, List[str]] = {
         "next": ["<ctrl>+<alt>+i"],
@@ -24,11 +26,14 @@ class Hotkeys:
         "disable": ["<ctrl>+<alt>+e"],
         "enable": ["<ctrl>+<alt>+e"],
         "exit": ["<ctrl>+<shift>+<alt>+e"],
+        "save": ["<ctrl>+<alt>+l"],
+        "delete": ["<ctrl>+<alt>+l"],
     }
 
     ALLOWED_PAIRS = {
         frozenset(["pause", "unpause"]),
         frozenset(["enable", "disable"]),
+        frozenset(["save", "delete"]),
     }
 
     def __init__(self, **kwargs: Union[str, List[str], None]) -> None:
@@ -92,12 +97,13 @@ class Config:
         max_images: int = 20,
         old_images_threshold: float = 0.2,
         image_switch_interval: Optional[int] = 300,
-        wallpapers_folder_path: Path = Path("./wallpapers"),
+        cached_wallpapers_path: Path = Path("./wallpapers/cached"),
+        user_saved_wallpapers_path: Path = Path("./wallpapers"),
         hotkeys: Optional[Hotkeys] = None,
         default_image: Optional[Path] = None,
         ratings: Optional[List[str]] = None,
         min_score: Optional[int] = None,
-        max_image_size: Optional[int] = None,
+        max_image_size: Optional[int] = 20971520,
         cache_refresh_interval: Optional[str] = "7d",
         **kwargs: Any,
     ) -> None:
@@ -142,7 +148,14 @@ class Config:
 
         self.image_switch_interval = image_switch_interval
 
-        self.wallpapers_folder_path = wallpapers_folder_path
+        if cached_wallpapers_path.resolve() == user_saved_wallpapers_path.resolve():
+            raise ValueError(
+                "The wallpapers folder path and saved wallpapers folder path must be different."
+            )
+
+        self.cached_wallpapers_path = cached_wallpapers_path
+        self.user_saved_wallpapers_path = user_saved_wallpapers_path
+
         self.hotkeys = hotkeys if hotkeys else Hotkeys()
         self.default_image = default_image
 
@@ -181,7 +194,8 @@ class Config:
             "max_images": self.max_images,
             "old_images_threshold": self.old_images_threshold,
             "image_switch_interval": self.image_switch_interval,
-            "wallpapers_folder_path": str(self.wallpapers_folder_path),
+            "cached_wallpapers_path": str(self.cached_wallpapers_path),
+            "user_saved_wallpapers_path": str(self.user_saved_wallpapers_path),
             "hotkeys": self.hotkeys.to_dict(),
             "default_image": str(self.default_image) if self.default_image else None,
             "ratings": self.ratings,
@@ -192,9 +206,13 @@ class Config:
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "Config":
-        data["wallpapers_folder_path"] = Path(
-            data.get("wallpapers_folder_path", "./wallpapers")
+        data["cached_wallpapers_path"] = Path(
+            data.get("cached_wallpapers_path", "./wallpapers")
         )
+        data["user_saved_wallpapers_path"] = Path(
+            data.get("user_saved_wallpapers_path", "./saved")
+        )
+
         default_image = data.get("default_image")
         data["default_image"] = Path(default_image) if default_image else None
         data["hotkeys"] = Hotkeys.from_dict(data.get("hotkeys", {}))
