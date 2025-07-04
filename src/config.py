@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from constants import CONFIG_PATH
 from logger import logger
@@ -8,58 +8,75 @@ from utils import parse_duration
 
 
 class Hotkeys:
-    next: Optional[str]
-    back: Optional[str]
-    pause: Optional[str]
-    unpause: Optional[str]
-    disable: Optional[str]
-    enable: Optional[str]
-    exit: Optional[str]
+    next: List[str]
+    back: List[str]
+    pause: List[str]
+    unpause: List[str]
+    disable: List[str]
+    enable: List[str]
+    exit: List[str]
 
-    DEFAULTS = {
-        "next": "<ctrl>+<alt>+i",
-        "back": "<ctrl>+<alt>+u",
-        "pause": "<ctrl>+<alt>+p",
-        "unpause": "<ctrl>+<alt>+p",
-        "disable": "<ctrl>+<alt>+e",
-        "enable": "<ctrl>+<alt>+e",
-        "exit": "<ctrl>+<shift>+<alt>+e",
+    DEFAULTS: Dict[str, List[str]] = {
+        "next": ["<ctrl>+<alt>+i"],
+        "back": ["<ctrl>+<alt>+u"],
+        "pause": ["<ctrl>+<alt>+p"],
+        "unpause": ["<ctrl>+<alt>+p"],
+        "disable": ["<ctrl>+<alt>+e"],
+        "enable": ["<ctrl>+<alt>+e"],
+        "exit": ["<ctrl>+<shift>+<alt>+e"],
     }
 
-    ALLOWED_PAIRS = {frozenset(["pause", "unpause"]), frozenset(["enable", "disable"])}
+    ALLOWED_PAIRS = {
+        frozenset(["pause", "unpause"]),
+        frozenset(["enable", "disable"]),
+    }
 
-    def __init__(self, **kwargs: Optional[str]) -> None:
+    def __init__(self, **kwargs: Union[str, List[str], None]) -> None:
         invalid_keys = set(kwargs) - self.DEFAULTS.keys()
         if invalid_keys:
             raise ValueError(
-                f"Invalid config hotkey name{'' if len(invalid_keys) == 1 else 's'}: {', '.join(invalid_keys)}. Allowed keys are: {', '.join(self.DEFAULTS.keys())}"
+                f"Invalid config hotkey name{'' if len(invalid_keys) == 1 else 's'}: "
+                f"{', '.join(invalid_keys)}. Allowed keys are: {', '.join(self.DEFAULTS.keys())}"
             )
 
-        keys = {**self.DEFAULTS, **kwargs}
+        keys: Dict[str, List[str]] = {}
+
+        for action in self.DEFAULTS:
+            value = kwargs.get(action, self.DEFAULTS[action])
+            if value is None:
+                keys[action] = []
+            elif isinstance(value, str):
+                keys[action] = [value]
+            elif isinstance(value, list) and all(
+                isinstance(item, str) for item in value
+            ):
+                keys[action] = value
+            else:
+                raise TypeError(
+                    f"Hotkey for '{action}' must be a string, list of strings, or None."
+                )
 
         seen: Dict[str, str] = {}
-        for action, hotkey in keys.items():
-            if hotkey is None:
-                continue
+        for action, hotkeys in keys.items():
+            for hotkey in hotkeys:
+                if hotkey in seen:
+                    prev_action = seen[hotkey]
+                    pair = frozenset([prev_action, action])
+                    if pair not in self.ALLOWED_PAIRS:
+                        raise ValueError(
+                            f"Duplicate hotkey '{hotkey}' for '{prev_action}' and '{action}' is not allowed."
+                        )
+                else:
+                    seen[hotkey] = action
 
-            if hotkey in seen:
-                prev_action = seen[hotkey]
-                pair = frozenset([prev_action, action])
-                if pair not in self.ALLOWED_PAIRS:
-                    raise ValueError(
-                        f"Duplicate hotkey '{hotkey}' for '{prev_action}' and '{action}' is not allowed."
-                    )
-            else:
-                seen[hotkey] = action
+        for action, hotkey_list in keys.items():
+            setattr(self, action, hotkey_list)
 
-        for action, hotkey in keys.items():
-            setattr(self, action, hotkey)
-
-    def to_dict(self) -> Dict[str, str]:
-        return self.__dict__
+    def to_dict(self) -> Dict[str, List[str]]:
+        return {key: getattr(self, key) for key in self.DEFAULTS}
 
     @staticmethod
-    def from_dict(data: Dict[str, str]) -> "Hotkeys":
+    def from_dict(data: Dict[str, Union[str, List[str], None]]) -> "Hotkeys":
         return Hotkeys(**data)
 
 
@@ -144,6 +161,7 @@ class Config:
         self.cache_refresh_interval = (
             parse_duration(cache_refresh_interval) if cache_refresh_interval else None
         )
+        self.cache_refresh_interval_str = cache_refresh_interval
 
     def _validate_ratings(self, ratings: List[str]) -> List[str]:
         allowed = {"s", "q", "e"}
@@ -169,6 +187,7 @@ class Config:
             "ratings": self.ratings,
             "min_score": self.min_score,
             "max_image_size": self.max_image_size,
+            "cache_refresh_interval": self.cache_refresh_interval_str,
         }
 
     @staticmethod

@@ -90,13 +90,27 @@ The application is configured via a `config.json` file. Here are the available o
     "image_switch_interval": 300,
     "wallpapers_folder_path": "wallpapers",
     "hotkeys": {
-        "next": "<ctrl>+<alt>+i",
-        "back": "<ctrl>+<alt>+u",
-        "pause": "<ctrl>+<alt>+p",
-        "unpause": "<ctrl>+<alt>+p",
-        "disable": "<ctrl>+<alt>+e",
-        "enable": "<ctrl>+<alt>+e",
-        "exit": "<ctrl>+<shift>+<alt>+e"
+        "next": [
+            "<ctrl>+<alt>+i"
+        ],
+        "back": [
+            "<ctrl>+<alt>+u"
+        ],
+        "pause": [
+            "<ctrl>+<alt>+p"
+        ],
+        "unpause": [
+            "<ctrl>+<alt>+p"
+        ],
+        "disable": [
+            "<ctrl>+<alt>+e"
+        ],
+        "enable": [
+            "<ctrl>+<alt>+e"
+        ],
+        "exit": [
+            "<ctrl>+<shift>+<alt>+e"
+        ]
     },
     "default_image": null,
     "ratings": [
@@ -122,7 +136,46 @@ The default `hotkeys` object contains the following keys:
 | `enable`  | `<ctrl>+<alt>+e`         | Enable wallpaper changer  |
 | `exit`    | `<ctrl>+<shift>+<alt>+e` | Exit the application      |
 
-Only the pairs `pause`, `unpause` and `enable`, `disable` are allowed to share the same hotkey string. No other hotkeys should be duplicates. Each hotkey value can also be set to null to disable that particular hotkey.
+Only the pairs `pause`, `unpause` and `enable`, `disable` are allowed to share the same hotkey string. No other hotkeys should be duplicates. Each hotkey value can also be set to null to disable that particular hotkey. Hotkey values can be specified as a list of hotkey strings instead of a single string. This allows binding multiple shortcuts to the same action.
+
+#### Multiple Keyboard Layouts
+
+If you use multiple keyboard layouts (e.g., English and Cyrillic) where the same physical key corresponds to different letters, **you should provide multiple hotkeys** — one for each layout — to ensure consistent behavior across layouts.
+
+**Example if you have Russian/Ukrainian and English keyboard layouts:**
+
+```json
+"hotkeys": {
+    "next": [
+        "<ctrl>+<alt>+i",
+        "<ctrl>+<alt>+ш"
+    ],
+    "back": [
+        "<ctrl>+<alt>+u",
+        "<ctrl>+<alt>+г"
+    ],
+    "pause": [
+        "<ctrl>+<alt>+p",
+        "<ctrl>+<alt>+з"
+    ],
+    "unpause": [
+        "<ctrl>+<alt>+p",
+        "<ctrl>+<alt>+з"
+    ],
+    "disable": [
+        "<ctrl>+<alt>+e",
+        "<ctrl>+<alt>+у"
+    ],
+    "enable": [
+        "<ctrl>+<alt>+e",
+        "<ctrl>+<alt>+у"
+    ],
+    "exit": [
+        "<ctrl>+<shift>+<alt>+e",
+        "<ctrl>+<shift>+<alt>+у"
+    ]
+},
+```
 
 ## Adding to Startup (Windows)
 

@@ -39,21 +39,17 @@ if __name__ == "__main__":
             changer = WallpaperChanger(config)
             changer.setup_hotkeys(hotkey_actions)
 
-            exit_key = config.hotkeys.exit
             exit_event = threading.Event()
 
             windows_console_exit_handler(exit_event)
 
-            if exit_key:
-                hotkey_actions[exit_key] = lambda: exit_event.set()
+            for exit_key in config.hotkeys.exit:
+                hotkey_actions[exit_key] = exit_event.set
 
             listener = keyboard.GlobalHotKeys(hotkey_actions)
             listener.start()
 
-            if exit_key:
-                logger.info(f"Wallpaper changer running. Press {exit_key} to exit")
-            else:
-                logger.info("Wallpaper changer running")
+            logger.info("Wallpaper changer running")
 
             try:
                 exit_event.wait()
@@ -62,15 +58,19 @@ if __name__ == "__main__":
 
             logger.info("Exit wallpaper changer")
 
-            if config.show_toasts:
-                ToastManager.show("Exit wallpaper changer...", None)
+            listener.stop()
+            listener = None
 
             exit_time = datetime.now()
+            if config.show_toasts:
+                time.sleep(0.05)
+                ToastManager.show("Exit wallpaper changer...", None)
+
             changer.exit()
 
             if config.show_toasts:
                 elapsed = (datetime.now() - exit_time).total_seconds()
-                remaining = 2 - elapsed
+                remaining = 2.05 - elapsed
                 if remaining > 0:
                     time.sleep(remaining)
 

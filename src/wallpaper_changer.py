@@ -2,7 +2,7 @@ import os
 import random
 import threading
 from datetime import datetime, timezone
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import urllib3
 
@@ -454,30 +454,63 @@ class WallpaperChanger:
             logger.debug(f"Hotkey: {func_name}")
             action()
 
-        if hk.next:
-            hotkey_actions[hk.next] = lambda: _hotkey("next", self.next_image_by_hotkey)
+        def make_callback(
+            func_name: str, action: Callable[[], None]
+        ) -> Callable[[], None]:
+            def callback() -> None:
+                _hotkey(func_name, action)
 
-        if hk.back:
-            hotkey_actions[hk.back] = lambda: _hotkey("back", self.prev_image)
+            return callback
 
-        if hk.pause == hk.unpause and hk.pause:
-            hotkey_actions[hk.pause] = lambda: _hotkey(
-                "toggle pause", self.toggle_pause
-            )
-        else:
-            if hk.pause:
-                hotkey_actions[hk.pause] = lambda: _hotkey("pause", self.pause)
+        def bind_keys(
+            keys: Iterable[str], func_name: str, action: Callable[[], None]
+        ) -> None:
+            for key in keys:
+                hotkey_actions[key] = make_callback(func_name, action)
 
-            if hk.unpause:
-                hotkey_actions[hk.unpause] = lambda: _hotkey("unpause", self.unpause)
+        def bind_toggle_group(
+            a_keys: List[str],
+            b_keys: List[str],
+            a_name: str,
+            a_action: Callable[[], None],
+            b_name: str,
+            b_action: Callable[[], None],
+            toggle_name: str,
+            toggle_action: Callable[[], None],
+        ) -> None:
+            a_set = set(a_keys)
+            b_set = set(b_keys)
 
-        if hk.disable == hk.enable and hk.disable:
-            hotkey_actions[hk.disable] = lambda: _hotkey(
-                "toggle enable", self.toggle_enable
-            )
-        else:
-            if hk.disable:
-                hotkey_actions[hk.disable] = lambda: _hotkey("disable", self.disable)
+            toggle_keys = a_set & b_set
+            a_only = a_set - toggle_keys
+            b_only = b_set - toggle_keys
 
-            if hk.enable:
-                hotkey_actions[hk.enable] = lambda: _hotkey("enable", self.enable)
+            bind_keys(toggle_keys, toggle_name, toggle_action)
+            bind_keys(a_only, a_name, a_action)
+            bind_keys(b_only, b_name, b_action)
+
+        bind_keys(hk.next, "next", self.next_image_by_hotkey)
+        bind_keys(hk.back, "back", self.prev_image)
+        bind_keys(hk.exit, "exit", self.exit)
+
+        bind_toggle_group(
+            hk.pause,
+            hk.unpause,
+            "pause",
+            self.pause,
+            "unpause",
+            self.unpause,
+            "toggle pause",
+            self.toggle_pause,
+        )
+
+        bind_toggle_group(
+            hk.enable,
+            hk.disable,
+            "enable",
+            self.enable,
+            "disable",
+            self.disable,
+            "toggle enable",
+            self.toggle_enable,
+        )
