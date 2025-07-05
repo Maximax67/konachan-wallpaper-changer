@@ -16,7 +16,17 @@ if sys.platform == "win32":
     import ctypes
 
 
+_is_dpi_awareness_set = False
+
+
 def set_dpi_awareness() -> None:
+    global _is_dpi_awareness_set
+
+    if _is_dpi_awareness_set:
+        return
+
+    _is_dpi_awareness_set = True
+
     if sys.platform == "win32":
         # PROCESS_SYSTEM_DPI_AWARE
         try:
